@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- Based on http://openseadragon.github.io/openseadragonizer/index.html -->
+<!-- The License is not shown in that page, but maybe New BSD License and -->
+<!-- copyright notice is "Copyright (C) 2015 OpenSeadragon contributors". -->
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <title>Customized OpenSeadragonizer for sequentially numbered images</title>
+    </head>
+    <body>
+        <div id="openseadragon"></div>
+        <div id="loader"><span class="img-vertical-align-helper"></span></div>
+        <div id="popup">
+            <div id="error"></div>
+            <label for="url">Enter the URL of an image to OpenSeadragonize:</label><br>
+            <input type="url" id="url" autofocus>
+            <label for="pages">Enter the total number of images:</label><br>
+            <input type="pages" id="pages">
+            <button type="button" id="show-button">Show!</button>
+            <span class="powered-by">
+                Powered by <a href="http://openseadragon.github.io">OpenSeadragon</a> 
+                and <a href="http://openseadragon.github.io/openseadragonizer">OpenSeadragonizer</a>
+            </span>
+        </div>
+        <script src="openseadragon/openseadragon.min.js"></script>
+        <script src="index.js"></script>
+        <script src="platform-specific.js"></script>
+    </body>
+</html>

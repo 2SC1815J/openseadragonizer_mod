@@ -124,7 +124,9 @@
                 crossOriginPolicy: event.options.crossOrigin
             }];
         var sequenceMode = false;
-        var elems = /(\S+?)(\d+)\.(\S+)/.exec(image.src); //fix if needed
+        var a = document.createElement('a');
+        a.href = image.src;
+        var elems = /(\S+?)(\d+)\.(\S+)/.exec(a.pathname); //fix if needed
         if (elems && elems.length == 4) {
             var lastPage = parseInt(OpenSeadragon.getUrlParameter("pages"), 10);
             if (isNaN(lastPage)) {
@@ -136,14 +138,14 @@
             for (var i = startPage + 1; i <= lastPage; i++) {
                 tileSources.push({
                     type: 'image',
-                    url: elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
+                    url: a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
                     crossOriginPolicy: event.options.crossOrigin
                 });
             }
             for (var i = 1; i < startPage; i++) {
                 tileSources.push({
                     type: 'image',
-                    url: elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
+                    url: a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
                     crossOriginPolicy: event.options.crossOrigin
                 });
             }

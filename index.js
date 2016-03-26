@@ -34,6 +34,7 @@
  * Copyright (C) 2016, 2SC1815J
  * https://twitter.com/2SC1815J
  * Released under the New BSD license.
+ * https://github.com/2SC1815J/openseadragonizer_mod
  */
 (function () {
     var loaderElt = document.getElementById("loader");
@@ -140,6 +141,9 @@
                     crossOriginPolicy: event.options.crossOrigin
                 });
             }
+            OpenSeadragon.setString("Tooltips.FullPage", OpenSeadragon.getString("Tooltips.FullPage") + " (f)");
+            OpenSeadragon.setString("Tooltips.NextPage", OpenSeadragon.getString("Tooltips.NextPage") + " (n)");
+            OpenSeadragon.setString("Tooltips.PreviousPage", OpenSeadragon.getString("Tooltips.PreviousPage") + " (p)");
             sequenceMode = true;
         }
         var viewer = OpenSeadragon({
@@ -154,8 +158,39 @@
             viewer.removeHandler("tile-drawn", readyHandler);
             document.body.removeChild(loaderElt);
         });
+        if (sequenceMode) {
+            OpenSeadragon.addEvent(
+                document,
+                'keypress',
+                OpenSeadragon.delegate(this, function onKeyPress(e) {
+                    var key = e.keyCode ? e.keyCode : e.charCode;
+                    switch (String.fromCharCode(key)) {
+                    case 'n':
+                    case '>':
+                    case '.':
+                        if (viewer.nextButton) {
+                            viewer.nextButton.onRelease();
+                        }
+                        return false;
+                    case 'p':
+                    case '<':
+                    case ',':
+                        if (viewer.previousButton) {
+                            viewer.previousButton.onRelease();
+                        }
+                        return false;
+                    case 'f':
+                        if (viewer.fullPageButton) {
+                            viewer.fullPageButton.onRelease();
+                        }
+                        return false;
+                    }
+                }),
+                false
+            );
+        }
     }
-
+    
     function onError(event) {
         popupElt.style.display = "block";
         loaderElt.removeChild(event.image);

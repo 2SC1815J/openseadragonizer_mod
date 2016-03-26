@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <!-- Based on http://openseadragon.github.io/openseadragonizer/index.html -->
-<!-- The License is not shown in that page, but maybe New BSD License and -->
+<!-- The License is not shown in that page, would be the New BSD License, -->
 <!-- copyright notice is "Copyright (C) 2015 OpenSeadragon contributors". -->
+<!--
+  keyboard shortcuts
+  [ n, >, . ] - move next image
+  [ p, <, , ] - move previous image
+  [ f ] - toggle full page
+  [ u ] - show the URL of the current image
+-->
 <html lang="en">
     <head>
         <meta charset="utf-8">
@@ -9,7 +16,7 @@
         <title>Customized OpenSeadragonizer for sequentially numbered images</title>
     </head>
     <body>
-        <div id="openseadragon"></div>
+        <div id="openseadragon" tabindex="0"></div>
         <div id="loader"><span class="img-vertical-align-helper"></span></div>
         <div id="popup">
             <div id="error"></div>
@@ -22,6 +29,10 @@
                 Powered by <a href="http://openseadragon.github.io">OpenSeadragon</a> 
                 and <a href="http://openseadragon.github.io/openseadragonizer">OpenSeadragonizer</a>
             </span>
+        </div>
+        <div id="popup2">
+            <div id="img_url"></div>
+            <div id="ok_wrap"><button type="button" id="ok-button">OK</button></div>
         </div>
         <script src="openseadragon/openseadragon.min.js"></script>
         <script src="index.js"></script>

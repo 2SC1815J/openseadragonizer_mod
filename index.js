@@ -41,7 +41,9 @@
     var popupElt = document.getElementById("popup");
     var urlElt = document.getElementById("url");
     var pagesElt = document.getElementById("pages");
-
+    var popup2Elt = document.getElementById("popup2");
+    var imgurlElt = document.getElementById("img_url");
+    
     urlElt.onkeyup = function (event) {
         if (event.keyCode === 13) {
             location.href = '?img=' + urlElt.value + '&pages=' + pagesElt.value;
@@ -56,6 +58,10 @@
 
     document.getElementById("show-button").onclick = function () {
         location.href = '?img=' + urlElt.value + '&pages=' + pagesElt.value;
+    };
+
+    document.getElementById("ok-button").onclick = function () {
+        popup2Elt.style.display = "none";
     };
 
     window.OpenSeadragonizer = {
@@ -159,6 +165,12 @@
             document.body.removeChild(loaderElt);
         });
         if (sequenceMode) {
+            imgurlElt.textContent = location.href;
+            viewer.addHandler("page", function(data) {
+                imgurlElt.textContent = location.href.replace(
+                                            viewer.tileSources[0].url, 
+                                            viewer.tileSources[data.page].url);
+            });
             OpenSeadragon.addEvent(
                 document,
                 'keypress',
@@ -183,6 +195,10 @@
                         if (viewer.fullPageButton) {
                             viewer.fullPageButton.onRelease();
                         }
+                        return false;
+                    case 'u':
+                        popup2Elt.style.display = "block";
+                        document.getElementById("ok-button").focus();
                         return false;
                     }
                 }),

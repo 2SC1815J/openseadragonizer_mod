@@ -110,3 +110,36 @@ body {
 .powered-by a {
     color: #437AB2;
 }
+
+/*
+ * Customized OpenSeadragonizer for sequentially numbered images
+ *
+ * Copyright (C) 2016, 2SC1815J
+ * Released under the New BSD license.
+ */
+#popup2 {
+    display: none;
+    position: absolute;
+    top: 30%;
+    left: 12.5%;
+    background-color: #EEE;
+    width: 75%;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+#img_url {
+    margin-bottom: 1%;
+    text-align: center;
+}
+
+#ok_wrap {
+    text-align: center;
+}
+
+#popup2 button {
+    font-size: large;
+    border-radius: 5px;
+    color: #333;
+    border: 1px solid black;
+}

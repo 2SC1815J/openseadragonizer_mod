@@ -22,7 +22,8 @@
 
 - [https://2sc1815j.github.io/openseadragonizer_mod/?img=http://archive.wul.waseda.ac.jp/kosho/he12/he12_04353/he12_04353_p0001.jpg&pages=121](https://2sc1815j.github.io/openseadragonizer_mod/?img=http://archive.wul.waseda.ac.jp/kosho/he12/he12_04353/he12_04353_p0001.jpg&pages=121)
 
-### キーボードショートカット (keyboard navigation)
+### キーボードショートカット (keyboard shortcuts)
  - [ n, >, . ] - 次のコマへ移動 (move next image)
  - [ p, <, , ] - 前のコマへ移動 (move previous image)
  - [ f ] - フルスクリーン切り替え (toggle full page)
+ - [ u ] - 現在のコマのURLを表示 (show the URL of the current image)

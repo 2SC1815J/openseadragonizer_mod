@@ -118,10 +118,26 @@
         var image = event.image;
         document.title = "OpenSeadragon " + image.src +
                 " (" + image.naturalWidth + "x" + image.naturalHeight + ")";
+        var overlays_str = [];
+        var fragment = location.hash;
+        if (fragment) {
+            var spatialDims = /xywh=percent:([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+)/.exec(fragment);
+            if (spatialDims && spatialDims.length == 5) {
+                overlays_str.push({ 
+                        id: 'runtime-overlay',
+                        x: Number(spatialDims[1]) / 100,
+                        y: Number(spatialDims[2]) / 100,
+                        width: Number(spatialDims[3]) / 100,
+                        height: Number(spatialDims[4]) / 100,
+                        className: 'highlight'
+                        });
+            }
+        }
         var tileSources = [{
                 type: 'image',
                 url: image.src,
-                crossOriginPolicy: event.options.crossOrigin
+                crossOriginPolicy: event.options.crossOrigin,
+                overlays: overlays_str,
             }];
         var sequenceMode = false;
         var a = document.createElement('a');
@@ -166,12 +182,34 @@
             viewer.removeHandler("tile-drawn", readyHandler);
             document.body.removeChild(loaderElt);
         });
+        var selection = viewer.selection({
+            returnPixelCoordinates: false,
+            restrictToImage: true,
+            onSelection: function(rect) {
+                viewer.removeOverlay("runtime-overlay");
+                var elt = document.createElement("div");
+                elt.id = "runtime-overlay";
+                elt.className = "highlight";
+                viewer.addOverlay({
+                    element: elt,
+                    location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height)
+                });
+                location.hash = 'xywh=percent:' + rect.x * 100 + "," + rect.y * 100  + "," + rect.width * 100  + "," + rect.height * 100;
+            }
+        });
         if (sequenceMode) {
+            var origLoc = location.href;
             imgurlElt.textContent = location.href;
             viewer.addHandler("page", function(data) {
-                imgurlElt.textContent = location.href.replace(
+                var new_url = origLoc.replace(
                                             viewer.tileSources[0].url, 
                                             viewer.tileSources[data.page].url);
+                imgurlElt.textContent = new_url;
+                if (history.replaceState && history.state !== undefined) {
+                    history.replaceState(null, null, new_url);
+                } else {
+                    //TODO
+                }
             });
             OpenSeadragon.addEvent(
                 document,

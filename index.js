@@ -78,10 +78,12 @@
                     decodeURIComponent(imgUrlParameter) : imgUrlParameter;
             }
 
+            var xmlJsonSrcMode = (url.search(/\.(xml|json|dzi)$/) != -1);
             var options = {
                 src: url,
                 container: document.getElementById("loader"),
-                crossOrigin: 'Anonymous'
+                crossOrigin: 'Anonymous',
+                xmlJsonSrcMode: xmlJsonSrcMode
             };
             loadImage(options, onImageLoaded, function (event) {
                 loaderElt.removeChild(event.image);
@@ -94,36 +96,49 @@
     };
 
     function loadImage(options, successCallback, errorCallback) {
-        var image = new Image();
-        options.container.appendChild(image);
-        image.onload = function () {
+        if (options.xmlJsonSrcMode) {
+            var obj = new Object();
+            obj.src = options.src;
             successCallback({
-                image: image,
+                image: obj,
                 options: options
             });
-        };
-        image.onerror = function () {
-            errorCallback({
-                image: image,
-                options: options
-            });
-        };
-        if (options.crossOrigin) {
-            image.crossOrigin = options.crossOrigin;
+        } else {
+            var image = new Image();
+            options.container.appendChild(image);
+            image.onload = function () {
+                successCallback({
+                    image: image,
+                    options: options
+                });
+            };
+            image.onerror = function () {
+                errorCallback({
+                    image: image,
+                    options: options
+                });
+            };
+            if (options.crossOrigin) {
+                image.crossOrigin = options.crossOrigin;
+            }
+            image.src = options.src;
         }
-        image.src = options.src;
     }
 
     function onImageLoaded(event) {
         var image = event.image;
-        document.title = "OpenSeadragon " + image.src +
-                " (" + image.naturalWidth + "x" + image.naturalHeight + ")";
-        var overlays_str = [];
+        var xmlJsonSrcMode = event.options.xmlJsonSrcMode || false;
+        var docTitle = "OpenSeadragon " + image.src;
+        if (!xmlJsonSrcMode) {
+            docTitle += " (" + image.naturalWidth + "x" + image.naturalHeight + ")";
+        }
+        document.title = docTitle;
+        var overlays = [];
         var fragment = location.hash;
         if (fragment) {
-            var spatialDims = /xywh=percent:([0-9.]+),([0-9.]+),([0-9.]+),([0-9.]+)/.exec(fragment);
+            var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(fragment); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
             if (spatialDims && spatialDims.length == 5) {
-                overlays_str.push({ 
+                overlays.push({ 
                         id: 'runtime-overlay',
                         x: Number(spatialDims[1]) / 100,
                         y: Number(spatialDims[2]) / 100,
@@ -133,12 +148,17 @@
                         });
             }
         }
-        var tileSources = [{
-                type: 'image',
-                url: image.src,
-                crossOriginPolicy: event.options.crossOrigin,
-                overlays: overlays_str,
-            }];
+        var tileSources = [];
+        if (xmlJsonSrcMode) {
+            tileSources = [ image.src ];
+        } else {
+            tileSources = [{
+                    type: 'image',
+                    url: image.src,
+                    crossOriginPolicy: event.options.crossOrigin,
+                    overlays: overlays,
+                    }];
+        }
         var sequenceMode = false;
         var a = document.createElement('a');
         a.href = image.src;
@@ -152,18 +172,28 @@
             var startPage = Number(digits);
             var pad = Array(digits.length + 1).join("0");
             for (var i = startPage + 1; i <= lastPage; i++) {
-                tileSources.push({
-                    type: 'image',
-                    url: a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
-                    crossOriginPolicy: event.options.crossOrigin
-                });
+                var srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
+                if (xmlJsonSrcMode) {
+                    tileSources.push( srcUrl );
+                } else {
+                    tileSources.push({
+                        type: 'image',
+                        url: srcUrl,
+                        crossOriginPolicy: event.options.crossOrigin
+                    });
+                }
             }
             for (var i = 1; i < startPage; i++) {
-                tileSources.push({
-                    type: 'image',
-                    url: a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3],
-                    crossOriginPolicy: event.options.crossOrigin
-                });
+                var srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
+                if (xmlJsonSrcMode) {
+                    tileSources.push( srcUrl );
+                } else {
+                    tileSources.push({
+                        type: 'image',
+                        url: srcUrl,
+                        crossOriginPolicy: event.options.crossOrigin
+                    });
+                }
             }
             OpenSeadragon.setString("Tooltips.FullPage", OpenSeadragon.getString("Tooltips.FullPage") + " (f)");
             OpenSeadragon.setString("Tooltips.NextPage", OpenSeadragon.getString("Tooltips.NextPage") + " (n)");
@@ -178,13 +208,9 @@
             tileSources: tileSources,
             maxZoomPixelRatio: 2
         });
-        viewer.addHandler("tile-drawn", function readyHandler() {
-            viewer.removeHandler("tile-drawn", readyHandler);
-            document.body.removeChild(loaderElt);
-        });
         var selection = viewer.selection({
             returnPixelCoordinates: false,
-            restrictToImage: true,
+            //restrictToImage: true, //will have trouble at the bottom of portrait images
             onSelection: function(rect) {
                 viewer.removeOverlay("runtime-overlay");
                 var elt = document.createElement("div");
@@ -192,23 +218,40 @@
                 elt.className = "highlight";
                 viewer.addOverlay({
                     element: elt,
-                    location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height)
+                    location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height) //these ratios are based on image width (not compatible with Media Fragments URI)
                 });
                 location.hash = 'xywh=percent:' + rect.x * 100 + "," + rect.y * 100  + "," + rect.width * 100  + "," + rect.height * 100;
+            }
+        });
+        var hasOverlays = overlays && overlays.length > 0;
+        viewer.addHandler("tile-drawn", function readyHandler() {
+            viewer.removeHandler("tile-drawn", readyHandler);
+            document.body.removeChild(loaderElt);
+            if (xmlJsonSrcMode && hasOverlays) {
+                viewer.raiseEvent('selection', overlays[0]);
             }
         });
         if (sequenceMode) {
             var origLoc = location.href;
             imgurlElt.textContent = location.href;
             viewer.addHandler("page", function(data) {
-                var new_url = origLoc.replace(
-                                            viewer.tileSources[0].url, 
-                                            viewer.tileSources[data.page].url);
+                var new_url;
+                var initialSrc = viewer.tileSources[0].url || viewer.tileSources[0];
+                var currentSrc = viewer.tileSources[data.page].url || viewer.tileSources[data.page];
+                var new_url = origLoc.replace(/%2F/g, "/").replace(initialSrc, currentSrc);
                 imgurlElt.textContent = new_url;
                 if (history.replaceState && history.state !== undefined) {
                     history.replaceState(null, null, new_url);
                 } else {
                     //TODO
+                }
+                if (data.page == 0 && xmlJsonSrcMode && hasOverlays) {
+                    viewer.addHandler("tile-drawn", function readyHandler2() {
+                        viewer.removeHandler("tile-drawn", readyHandler2);
+                        if (xmlJsonSrcMode && hasOverlays) {
+                            viewer.raiseEvent('selection', overlays[0]);
+                        }
+                    });
                 }
             });
             OpenSeadragon.addEvent(

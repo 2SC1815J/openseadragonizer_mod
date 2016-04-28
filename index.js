@@ -133,19 +133,18 @@
             docTitle += " (" + image.naturalWidth + "x" + image.naturalHeight + ")";
         }
         document.title = docTitle;
-        var overlays = [];
+        var overlay = {};
         var fragment = location.hash;
         if (fragment) {
             var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(fragment); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
             if (spatialDims && spatialDims.length == 5) {
-                overlays.push({ 
-                        id: 'runtime-overlay',
+                overlay = { 
                         x: Number(spatialDims[1]) / 100,
                         y: Number(spatialDims[2]) / 100,
                         width: Number(spatialDims[3]) / 100,
                         height: Number(spatialDims[4]) / 100,
-                        className: 'highlight'
-                        });
+                        pageNo: 0,
+                    };
             }
         }
         var tileSources = [];
@@ -156,7 +155,6 @@
                     type: 'image',
                     url: image.src,
                     crossOriginPolicy: event.options.crossOrigin,
-                    overlays: overlays,
                     }];
         }
         var sequenceMode = false;
@@ -220,15 +218,28 @@
                     element: elt,
                     location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height) //these ratios are based on image width (not compatible with Media Fragments URI)
                 });
-                location.hash = 'xywh=percent:' + rect.x * 100 + "," + rect.y * 100  + "," + rect.width * 100  + "," + rect.height * 100;
+                var centupleStr = function(num) {
+                    return (num * 100).toFixed(14).replace(/\.?0+$/g, ''); //ad hoc
+                };
+                location.hash = 'xywh=percent:' + centupleStr(rect.x) + "," + centupleStr(rect.y)  + "," + centupleStr(rect.width) + "," + centupleStr(rect.height);
+                overlay = {
+                        x: rect.x,
+                        y: rect.y,
+                        width: rect.width,
+                        height: rect.height,
+                        pageNo: viewer.currentPage(),
+                    };
             }
         });
-        var hasOverlays = overlays && overlays.length > 0;
-        viewer.addHandler("tile-drawn", function readyHandler() {
+        var hasOverlay = function() { return Object.keys(overlay).length > 0; };
+        viewer.addHandler("tile-drawn", function readyHandler(event) {
             viewer.removeHandler("tile-drawn", readyHandler);
             document.body.removeChild(loaderElt);
-            if (xmlJsonSrcMode && hasOverlays) {
-                viewer.raiseEvent('selection', overlays[0]);
+            if (xmlJsonSrcMode) {
+                document.title += " (" + event.tiledImage.source.width + "x" + event.tiledImage.source.height + ")";
+            }
+            if (hasOverlay()) {
+                viewer.raiseEvent('selection', overlay);
             }
         });
         if (sequenceMode) {
@@ -245,13 +256,17 @@
                 } else {
                     //TODO
                 }
-                if (data.page == 0 && xmlJsonSrcMode && hasOverlays) {
-                    viewer.addHandler("tile-drawn", function readyHandler2() {
-                        viewer.removeHandler("tile-drawn", readyHandler2);
-                        if (xmlJsonSrcMode && hasOverlays) {
-                            viewer.raiseEvent('selection', overlays[0]);
-                        }
-                    });
+                if (hasOverlay()) {
+                    if (data.page == overlay.pageNo) {
+                        viewer.addHandler("tile-drawn", function readyHandler2() {
+                            viewer.removeHandler("tile-drawn", readyHandler2);
+                            if (hasOverlay()) {
+                                viewer.raiseEvent('selection', overlay);
+                            }
+                        });
+                    } else {
+                        location.hash = "";
+                    }
                 }
             });
             OpenSeadragon.addEvent(

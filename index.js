@@ -30,7 +30,9 @@
 /*
  * Customized OpenSeadragonizer for sequentially numbered images
  * example: index.html?img=http://archive.wul.waseda.ac.jp/kosho/he12/he12_04353/he12_04353_p0001.jpg&pages=121
- *
+ * example: index.html?img=http://archive.wul.waseda.ac.jp/kosho/he12/he12_04353/he12_04353_p0073.jpg&pages=121#xywh=percent:17.5,9,2.5,4.5
+ * example: index.html?img=http://libimages.princeton.edu/loris/pudl0071/4055459/01/00000008.jp2/info.json&pages=473#xywh=percent:58.6,19,7,7.5
+ * 
  * Copyright (C) 2016, 2SC1815J
  * https://twitter.com/2SC1815J
  * Released under the New BSD license.
@@ -138,11 +140,26 @@
         if (fragment) {
             var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(fragment); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
             if (spatialDims && spatialDims.length == 5) {
+                var percetToRatio = function(num) {
+                    if (isNaN(num)) {
+                        return 0;
+                    }
+                    var elems = String(num).split(".");
+                    var tmp = "00" + String(Math.abs(parseInt(elems[0])));
+                    if (num < 0) {
+                        tmp = "-" + tmp;
+                    }
+                    if (elems.length > 1) {
+                        return parseFloat(tmp.substr(0, tmp.length - 2) + "." + tmp.slice(-2) + elems[1]);
+                    } else {
+                        return parseFloat(tmp.substr(0, tmp.length - 2) + "." + tmp.slice(-2));
+                    }
+                };
                 overlay = { 
-                        x: Number(spatialDims[1]) / 100,
-                        y: Number(spatialDims[2]) / 100,
-                        width: Number(spatialDims[3]) / 100,
-                        height: Number(spatialDims[4]) / 100,
+                        x: percetToRatio(Number(spatialDims[1])),
+                        y: percetToRatio(Number(spatialDims[2])),
+                        width: percetToRatio(Number(spatialDims[3])),
+                        height: percetToRatio(Number(spatialDims[4])),
                         pageNo: 0,
                     };
             }
@@ -218,10 +235,16 @@
                     element: elt,
                     location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height) //these ratios are based on image width (not compatible with Media Fragments URI)
                 });
-                var centupleStr = function(num) {
-                    return (num * 100).toFixed(14).replace(/\.?0+$/g, ''); //ad hoc
+                var ratioToPercentStr = function(num) {
+                    var elems = String(num).split(".");
+                    if (elems.length > 1) {
+                        elems[1] = elems[1] + "00";
+                        return String(parseFloat(elems[0] + elems[1].substr(0, 2) + "." + elems[1].substr(2)));
+                    } else {
+                        return String(parseInt(elems[0] + "00"));
+                    }
                 };
-                location.hash = 'xywh=percent:' + centupleStr(rect.x) + "," + centupleStr(rect.y)  + "," + centupleStr(rect.width) + "," + centupleStr(rect.height);
+                location.hash = 'xywh=percent:' + ratioToPercentStr(rect.x) + "," + ratioToPercentStr(rect.y)  + "," + ratioToPercentStr(rect.width) + "," + ratioToPercentStr(rect.height);
                 overlay = {
                         x: rect.x,
                         y: rect.y,

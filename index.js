@@ -136,6 +136,7 @@
         }
         document.title = docTitle;
         var overlay = {};
+        var hasOverlay = function() { return Object.keys(overlay).length > 0; };
         var fragment = location.hash;
         if (fragment) {
             var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(fragment); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
@@ -177,7 +178,11 @@
         var sequenceMode = false;
         var a = document.createElement('a');
         a.href = image.src;
-        var elems = /(\S+?)(\d+)\.(\S+)/.exec(a.pathname); //fix if needed
+        var imagePath = a.pathname;
+        if (imagePath.indexOf("/") != 0) {
+            imagePath = "/" + imagePath;
+        }
+        var elems = /(\S+?)(\d+)\.(\S+)/.exec(imagePath); //fix if needed
         if (elems && elems.length == 4) {
             var lastPage = parseInt(OpenSeadragon.getUrlParameter("pages"), 10);
             if (isNaN(lastPage)) {
@@ -215,6 +220,10 @@
             OpenSeadragon.setString("Tooltips.PreviousPage", OpenSeadragon.getString("Tooltips.PreviousPage") + " (p)");
             sequenceMode = true;
         }
+        var hasHistoryReplaceState = function() {
+            return history.replaceState && history.state !== undefined; //IE < 10 are not supported
+            //also OpenSeadragonSelection is not working properly in IE < 10 by another reason
+        };
         var viewer = OpenSeadragon({
             id: "openseadragon",
             prefixUrl: "openseadragon/images/",
@@ -244,7 +253,12 @@
                         return String(parseInt(elems[0] + "00"));
                     }
                 };
-                location.hash = 'xywh=percent:' + ratioToPercentStr(rect.x) + "," + ratioToPercentStr(rect.y)  + "," + ratioToPercentStr(rect.width) + "," + ratioToPercentStr(rect.height);
+                var new_url = imgurlElt.textContent.replace(/#.*$/, "") + 
+                        '#xywh=percent:' + ratioToPercentStr(rect.x) + "," + ratioToPercentStr(rect.y)  + "," + ratioToPercentStr(rect.width) + "," + ratioToPercentStr(rect.height);
+                imgurlElt.textContent = new_url;
+                if (hasHistoryReplaceState()) {
+                    history.replaceState(null, null, new_url);
+                }
                 overlay = {
                         x: rect.x,
                         y: rect.y,
@@ -254,7 +268,6 @@
                     };
             }
         });
-        var hasOverlay = function() { return Object.keys(overlay).length > 0; };
         viewer.addHandler("tile-drawn", function readyHandler(event) {
             viewer.removeHandler("tile-drawn", readyHandler);
             document.body.removeChild(loaderElt);
@@ -266,18 +279,16 @@
             }
         });
         if (sequenceMode) {
-            var origLoc = location.href;
-            imgurlElt.textContent = location.href;
+            var origLoc = location.protocol + "//" + location.host + location.pathname;
+            var origSearch = location.search;
+            imgurlElt.textContent = origLoc + origSearch + location.hash;
             viewer.addHandler("page", function(data) {
-                var new_url;
                 var initialSrc = viewer.tileSources[0].url || viewer.tileSources[0];
                 var currentSrc = viewer.tileSources[data.page].url || viewer.tileSources[data.page];
-                var new_url = origLoc.replace(/%2F/g, "/").replace(initialSrc, currentSrc);
+                var new_url = origLoc + origSearch.replace(/%2F/g, "/").replace(initialSrc, currentSrc);
                 imgurlElt.textContent = new_url;
-                if (history.replaceState && history.state !== undefined) {
+                if (hasHistoryReplaceState()) {
                     history.replaceState(null, null, new_url);
-                } else {
-                    //TODO
                 }
                 if (hasOverlay()) {
                     if (data.page == overlay.pageNo) {
@@ -287,8 +298,6 @@
                                 viewer.raiseEvent('selection', overlay);
                             }
                         });
-                    } else {
-                        location.hash = "";
                     }
                 }
             });
@@ -318,8 +327,12 @@
                         }
                         return false;
                     case 'u':
-                        popup2Elt.style.display = "block";
-                        document.getElementById("ok-button").focus();
+                        if (popup2Elt.style.display == "block") {
+                            popup2Elt.style.display = "none";
+                        } else {
+                            popup2Elt.style.display = "block";
+                            document.getElementById("ok-button").focus();
+                        }
                         return false;
                     }
                 }),

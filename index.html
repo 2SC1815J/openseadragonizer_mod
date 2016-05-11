@@ -35,8 +35,11 @@
             <div id="img_url"></div>
             <div id="ok_wrap"><button type="button" id="ok-button">OK</button></div>
         </div>
+        <!-- OpenSeadragon 2.1.0 uses "eval()" to parse JSON if window.JSON is not available. -->
+        <script>if (!window.JSON) {document.write(unescape('%3Cscript src="json2.js"%3E%3C/script%3E'));}</script>
         <script src="openseadragon/openseadragon.min.js"></script>
-        <script src="openseadragon/openseadragonselection.js"></script>
+        <!-- OpenSeadragonSelection 1.1.0 is not working properly in IE less than 10 -->
+        <script>if ("transform" in document.body.style) {document.write(unescape('%3Cscript src="openseadragon/openseadragonselection.js"%3E%3C/script%3E'));}</script>
         <script src="index.js"></script>
         <script src="platform-specific.js"></script>
     </body>

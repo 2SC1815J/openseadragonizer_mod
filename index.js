@@ -47,13 +47,13 @@
     var imgurlElt = document.getElementById("img_url");
     
     urlElt.onkeyup = function (event) {
-        if (event.keyCode === 13) {
+        if (event && event.keyCode === 13) {
             location.href = '?img=' + urlElt.value + '&pages=' + pagesElt.value;
         }
     };
 
     pagesElt.onkeyup = function (event) {
-        if (event.keyCode === 13 && urlElt.value != "") {
+        if (event && event.keyCode === 13 && urlElt.value !== "") {
             location.href = '?img=' + urlElt.value + '&pages=' + pagesElt.value;
         }
     };
@@ -80,7 +80,7 @@
                     decodeURIComponent(imgUrlParameter) : imgUrlParameter;
             }
 
-            var xmlJsonSrcMode = (url.search(/\.(xml|json|dzi)$/) != -1);
+            var xmlJsonSrcMode = (url.search(/\.(xml|json|dzi)$/) !== -1);
             var options = {
                 src: url,
                 container: document.getElementById("loader"),
@@ -99,7 +99,7 @@
 
     function loadImage(options, successCallback, errorCallback) {
         if (options.xmlJsonSrcMode) {
-            var obj = new Object();
+            var obj = {};
             obj.src = options.src;
             successCallback({
                 image: obj,
@@ -136,17 +136,16 @@
         }
         document.title = docTitle;
         var overlay = {};
-        var hasOverlay = function() { return Object.keys(overlay).length > 0; };
-        var fragment = location.hash;
-        if (fragment) {
-            var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(fragment); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
-            if (spatialDims && spatialDims.length == 5) {
+        var hasOverlay = function() { return ("x" in overlay) && ("y" in overlay); };
+        if (location.hash) {
+            var spatialDims = /xywh=percent:([0-9.-]+),([0-9.-]+),([0-9.]+),([0-9.]+)/.exec(location.hash); //accept x < 0, y < 0 (though invalid Media Fragments URI) 
+            if (spatialDims && spatialDims.length === 5) {
                 var percetToRatio = function(num) {
                     if (isNaN(num)) {
                         return 0;
                     }
                     var elems = String(num).split(".");
-                    var tmp = "00" + String(Math.abs(parseInt(elems[0])));
+                    var tmp = "00" + String(Math.abs(parseInt(elems[0], 10)));
                     if (num < 0) {
                         tmp = "-" + tmp;
                     }
@@ -157,12 +156,12 @@
                     }
                 };
                 overlay = { 
-                        x: percetToRatio(Number(spatialDims[1])),
-                        y: percetToRatio(Number(spatialDims[2])),
-                        width: percetToRatio(Number(spatialDims[3])),
-                        height: percetToRatio(Number(spatialDims[4])),
-                        pageNo: 0,
-                    };
+                    x: percetToRatio(Number(spatialDims[1])),
+                    y: percetToRatio(Number(spatialDims[2])),
+                    width: percetToRatio(Number(spatialDims[3])),
+                    height: percetToRatio(Number(spatialDims[4])),
+                    pageNo: 0
+                };
             }
         }
         var tileSources = [];
@@ -170,29 +169,30 @@
             tileSources = [ image.src ];
         } else {
             tileSources = [{
-                    type: 'image',
-                    url: image.src,
-                    crossOriginPolicy: event.options.crossOrigin,
-                    }];
+                type: 'image',
+                url: image.src,
+                crossOriginPolicy: event.options.crossOrigin
+            }];
         }
-        var sequenceMode = false;
+        var lastPage = 1;
         var a = document.createElement('a');
         a.href = image.src;
         var imagePath = a.pathname;
-        if (imagePath.indexOf("/") != 0) {
+        if (imagePath.indexOf("/") !== 0) {
             imagePath = "/" + imagePath;
         }
         var elems = /(\S+?)(\d+)\.(\S+)/.exec(imagePath); //fix if needed
-        if (elems && elems.length == 4) {
-            var lastPage = parseInt(OpenSeadragon.getUrlParameter("pages"), 10);
+        if (elems && elems.length === 4) {
+            lastPage = parseInt(OpenSeadragon.getUrlParameter("pages"), 10);
             if (isNaN(lastPage)) {
                 lastPage = 1;
             }
             var digits = elems[2];
             var startPage = Number(digits);
             var pad = Array(digits.length + 1).join("0");
-            for (var i = startPage + 1; i <= lastPage; i++) {
-                var srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
+            var i, srcUrl;
+            for (i = startPage + 1; i <= lastPage; i++) {
+                srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
                 if (xmlJsonSrcMode) {
                     tileSources.push( srcUrl );
                 } else {
@@ -203,8 +203,8 @@
                     });
                 }
             }
-            for (var i = 1; i < startPage; i++) {
-                var srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
+            for (i = 1; i < startPage; i++) {
+                srcUrl = a.protocol + "//" + a.host + elems[1] + (pad + String(i)).slice(-digits.length) + "." + elems[3];
                 if (xmlJsonSrcMode) {
                     tileSources.push( srcUrl );
                 } else {
@@ -215,16 +215,18 @@
                     });
                 }
             }
-            OpenSeadragon.setString("Tooltips.FullPage", OpenSeadragon.getString("Tooltips.FullPage") + " (f)");
-            OpenSeadragon.setString("Tooltips.NextPage", OpenSeadragon.getString("Tooltips.NextPage") + " (n)");
-            OpenSeadragon.setString("Tooltips.PreviousPage", OpenSeadragon.getString("Tooltips.PreviousPage") + " (p)");
-            sequenceMode = true;
         }
         var hasHistoryReplaceState = function() {
             return history.replaceState && history.state !== undefined; //IE < 10 are not supported
             //also OpenSeadragonSelection is not working properly in IE < 10 by another reason
         };
-        var viewer = OpenSeadragon({
+        var sequenceMode = tileSources.length > 1;
+        if (sequenceMode) {
+            OpenSeadragon.setString("Tooltips.FullPage", OpenSeadragon.getString("Tooltips.FullPage") + " (f)");
+            OpenSeadragon.setString("Tooltips.NextPage", OpenSeadragon.getString("Tooltips.NextPage") + " (n)");
+            OpenSeadragon.setString("Tooltips.PreviousPage", OpenSeadragon.getString("Tooltips.PreviousPage") + " (p)");
+        }
+        var viewer = new OpenSeadragon({
             id: "openseadragon",
             prefixUrl: "openseadragon/images/",
             sequenceMode: sequenceMode,
@@ -232,70 +234,89 @@
             tileSources: tileSources,
             maxZoomPixelRatio: 2
         });
-        var selection = viewer.selection({
-            returnPixelCoordinates: false,
-            //restrictToImage: true, //will have trouble at the bottom of portrait images
-            onSelection: function(rect) {
-                viewer.removeOverlay("runtime-overlay");
-                var elt = document.createElement("div");
-                elt.id = "runtime-overlay";
-                elt.className = "highlight";
-                viewer.addOverlay({
-                    element: elt,
-                    location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height) //these ratios are based on image width (not compatible with Media Fragments URI)
-                });
-                var ratioToPercentStr = function(num) {
-                    var elems = String(num).split(".");
-                    if (elems.length > 1) {
-                        elems[1] = elems[1] + "00";
-                        return String(parseFloat(elems[0] + elems[1].substr(0, 2) + "." + elems[1].substr(2)));
-                    } else {
-                        return String(parseInt(elems[0] + "00"));
-                    }
-                };
-                var new_url = imgurlElt.textContent.replace(/#.*$/, "") + 
-                        '#xywh=percent:' + ratioToPercentStr(rect.x) + "," + ratioToPercentStr(rect.y)  + "," + ratioToPercentStr(rect.width) + "," + ratioToPercentStr(rect.height);
-                imgurlElt.textContent = new_url;
-                if (hasHistoryReplaceState()) {
-                    history.replaceState(null, null, new_url);
+        if ("selection" in viewer) {
+            var selection = viewer.selection({
+                returnPixelCoordinates: false,
+                //restrictToImage: true, //will have trouble at the bottom of portrait images
+                onSelection: function(rect) {
+                    updateSelection(rect);
                 }
-                overlay = {
-                        x: rect.x,
-                        y: rect.y,
-                        width: rect.width,
-                        height: rect.height,
-                        pageNo: viewer.currentPage(),
-                    };
+            });
+        }
+        function updateSelection(rect) {
+            if ("pageNo" in rect) {
+                if (rect.pageNo !== viewer.currentPage()) {
+                    return;
+                }
             }
-        });
+            viewer.removeOverlay("runtime-overlay");
+            var elt = document.createElement("div");
+            elt.id = "runtime-overlay";
+            elt.className = "highlight";
+            viewer.addOverlay({
+                element: elt,
+                location: new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height) //these ratios are based on image width (not compatible with Media Fragments URI)
+            });
+            var ratioToPercentStr = function(num) {
+                var elems = String(num).split(".");
+                if (elems.length > 1) {
+                    elems[1] = elems[1] + "00";
+                    return String(parseFloat(elems[0] + elems[1].substr(0, 2) + "." + elems[1].substr(2)));
+                } else {
+                    return String(parseInt(elems[0] + "00", 10));
+                }
+            };
+            var newUrl = imgurlElt.textContent.replace(/#.*$/, "") + 
+                    '#xywh=percent:' + ratioToPercentStr(rect.x) + "," + ratioToPercentStr(rect.y)  + "," + ratioToPercentStr(rect.width) + "," + ratioToPercentStr(rect.height);
+            imgurlElt.textContent = newUrl;
+            if (hasHistoryReplaceState()) {
+                history.replaceState(null, null, newUrl);
+            }
+            overlay = {
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height,
+                pageNo: viewer.currentPage()
+            };
+        }
+        var tiledrawnHandler = false;
         viewer.addHandler("tile-drawn", function readyHandler(event) {
-            viewer.removeHandler("tile-drawn", readyHandler);
-            document.body.removeChild(loaderElt);
+            viewer.removeHandler("tile-drawn", readyHandler); // not work in IE < 9
+            if (tiledrawnHandler) { return; } else { tiledrawnHandler = true; }
+            if (loaderElt && loaderElt.parentNode) {
+                loaderElt.parentNode.removeChild(loaderElt);
+            }
             if (xmlJsonSrcMode) {
                 document.title += " (" + event.tiledImage.source.width + "x" + event.tiledImage.source.height + ")";
             }
             if (hasOverlay()) {
-                viewer.raiseEvent('selection', overlay);
+                updateSelection(overlay);
             }
         });
         if (sequenceMode) {
+            var initialSrc = viewer.tileSources[0].url || viewer.tileSources[0];
             var origLoc = location.protocol + "//" + location.host + location.pathname;
-            var origSearch = location.search;
+            var origSearch = "?img=" + initialSrc;
+            if (sequenceMode && lastPage > 1) {
+                origSearch += "&pages=" + String(lastPage);
+            }
             imgurlElt.textContent = origLoc + origSearch + location.hash;
             viewer.addHandler("page", function(data) {
-                var initialSrc = viewer.tileSources[0].url || viewer.tileSources[0];
                 var currentSrc = viewer.tileSources[data.page].url || viewer.tileSources[data.page];
-                var new_url = origLoc + origSearch.replace(/%2F/g, "/").replace(initialSrc, currentSrc);
-                imgurlElt.textContent = new_url;
+                var newUrl = origLoc + origSearch.replace(initialSrc, currentSrc);
+                imgurlElt.textContent = newUrl;
                 if (hasHistoryReplaceState()) {
-                    history.replaceState(null, null, new_url);
+                    history.replaceState(null, null, newUrl);
                 }
                 if (hasOverlay()) {
-                    if (data.page == overlay.pageNo) {
+                    if (data.page === overlay.pageNo) {
+                        var tiledrawnHandler2 = false;
                         viewer.addHandler("tile-drawn", function readyHandler2() {
-                            viewer.removeHandler("tile-drawn", readyHandler2);
+                            viewer.removeHandler("tile-drawn", readyHandler2); // not work in IE < 9
+                            if (tiledrawnHandler2) { return; } else { tiledrawnHandler2 = true; }
                             if (hasOverlay()) {
-                                viewer.raiseEvent('selection', overlay);
+                                updateSelection(overlay);
                             }
                         });
                     }
@@ -327,7 +348,7 @@
                         }
                         return false;
                     case 'u':
-                        if (popup2Elt.style.display == "block") {
+                        if (popup2Elt.style.display === "block") {
                             popup2Elt.style.display = "none";
                         } else {
                             popup2Elt.style.display = "block";
